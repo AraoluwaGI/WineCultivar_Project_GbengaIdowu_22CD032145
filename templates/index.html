@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wine Cultivar Prediction System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🍷 Wine Cultivar Origin Prediction System</h1>
+            <p class="subtitle">Predict wine cultivar based on chemical properties</p>
+            <div class="model-info">
+                <span class="badge">Algorithm: {{ algorithm }}</span>
+                <span class="badge">Accuracy: {{ "%.2f"|format(accuracy * 100) }}%</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Input Form -->
+            <div class="card">
+                <h2>Enter Wine Chemical Properties</h2>
+                <form id="predictionForm">
+                    <div class="form-grid">
+                        {% for feature in features %}
+                        <div class="form-group">
+                            <label for="{{ feature }}">
+                                {{ feature_info[feature].label }}
+                                {% if feature_info[feature].unit %}
+                                <span class="unit">({{ feature_info[feature].unit }})</span>
+                                {% endif %}
+                            </label>
+                            <input 
+                                type="number" 
+                                id="{{ feature }}" 
+                                name="{{ feature }}" 
+                                min="{{ feature_info[feature].min }}" 
+                                max="{{ feature_info[feature].max }}" 
+                                step="{{ feature_info[feature].step }}" 
+                                value="{{ feature_info[feature].default }}" 
+                                required
+                            >
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Predict Cultivar</span>
+                        </button>
+                        <button type="reset" class="btn btn-secondary">Reset</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="card results-card" style="display: none;">
+                <h2>Prediction Results</h2>
+                
+                <div class="result-main">
+                    <div class="result-label">Predicted Cultivar:</div>
+                    <div id="cultivar" class="result-value"></div>
+                </div>
+
+                <div class="confidence-section">
+                    <div class="confidence-label">Confidence:</div>
+                    <div id="confidence" class="confidence-value"></div>
+                    <div class="confidence-bar">
+                        <div id="confidenceBar" class="confidence-fill"></div>
+                    </div>
+                </div>
+
+                <div class="probabilities-section">
+                    <h3>Class Probabilities</h3>
+                    <div id="probabilities"></div>
+                </div>
+
+                <div class="input-summary">
+                    <h3>Input Summary</h3>
+                    <div id="inputSummary"></div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error" class="alert alert-error" style="display: none;"></div>
+
+            <!-- Loading Spinner -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing wine properties...</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Wine Cultivar Prediction System | Powered by Machine Learning</p>
+            <p class="small">Using Random Forest Classifier with 6 chemical features</p>
+        </footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('predictionForm');
+        const resultsDiv = document.getElementById('results');
+        const errorDiv = document.getElementById('error');
+        const loadingDiv = document.getElementById('loading');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Hide previous results and errors
+            resultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+
+            // Get form data
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loadingDiv.style.display = 'none';
+
+                if (data.success) {
+                    // Display results
+                    document.getElementById('cultivar').textContent = data.cultivar_name;
+                    document.getElementById('confidence').textContent = data.confidence.toFixed(2) + '%';
+                    document.getElementById('confidenceBar').style.width = data.confidence + '%';
+
+                    // Display probabilities
+                    let probHtml = '';
+                    for (const [cultivar, prob] of Object.entries(data.probabilities)) {
+                        probHtml += `
+                            <div class="prob-item">
+                                <span class="prob-label">${cultivar}:</span>
+                                <div class="prob-bar-container">
+                                    <div class="prob-bar" style="width: ${prob}%"></div>
+                                </div>
+                                <span class="prob-value">${prob.toFixed(2)}%</span>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('probabilities').innerHTML = probHtml;
+
+                    // Display input summary
+                    let summaryHtml = '<div class="input-grid">';
+                    for (const [feature, value] of Object.entries(data.input_data)) {
+                        summaryHtml += `
+                            <div class="input-item">
+                                <span class="input-label">${feature}:</span>
+                                <span class="input-value">${value}</span>
+                            </div>
+                        `;
+                    }
+                    summaryHtml += '</div>';
+                    document.getElementById('inputSummary').innerHTML = summaryHtml;
+
+                    resultsDiv.style.display = 'block';
+                    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    errorDiv.textContent = 'Error: ' + data.error;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Reset button handler
+        form.addEventListener('reset', () => {
+            resultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+        });
+    </script>
+</body>
+</html>

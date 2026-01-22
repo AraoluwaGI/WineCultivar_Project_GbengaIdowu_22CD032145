@@ -1,0 +1,11 @@
+Name: GBENGA-IDOWU ARAOLUWA
+
+Matric Number: 22CD032145
+
+Machine Learning Algorithm Used: Random Forest Classifier
+
+Model Persistence Method Used: Joblib
+
+Live URL of Hosted Application: https://WineCultivar-project-gbengaidowu-22cd032145.onrender.com
+
+GitHub Repository Link: https://github.com/AraoluwaGI/WineCultivar_Project_GbengaIdowu_22CD032145
